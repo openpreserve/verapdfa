@@ -40,6 +40,9 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.fdf.FDFDocument;
 import org.apache.pdfbox.persistence.util.COSObjectKey;
 
+import com.duallab.validation.ValidationConfig;
+import com.duallab.validation.validationtask.ValidationTaskType;
+
 /**
  * This class will handle the parsing of the PDF document.
  *
@@ -316,6 +319,8 @@ public class PDFParser extends BaseParser
 
     protected void parseHeader() throws IOException
     {
+        //pdf/a header validation
+        validator.validate(new ValidationConfig(pdfSource, ValidationTaskType.HEADER_VALIDATION_TASK));
         // read first line
         String header = readLine();
         // some pdf-documents are broken and the pdf-version is in one of the following lines

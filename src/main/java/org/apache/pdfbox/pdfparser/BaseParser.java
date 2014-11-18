@@ -43,6 +43,8 @@ import org.apache.pdfbox.io.PushBackInputStream;
 import org.apache.pdfbox.io.RandomAccess;
 import org.apache.pdfbox.persistence.util.COSObjectKey;
 
+import com.duallab.validation.Validator;
+
 /**
  * This class is used to contain parsing logic that will be used by both the
  * PDFParser and the COSStreamParser.
@@ -158,6 +160,8 @@ public abstract class BaseParser
      * Flag to skip malformed or otherwise unparseable input where possible.
      */
     protected final boolean forceParsing;
+
+    protected Validator validator;
 
     /**
      * Default constructor.
@@ -1755,5 +1759,9 @@ public abstract class BaseParser
             IOUtils.closeQuietly(pdfSource);
             pdfSource = null;
         }
+    }
+
+    public void setValidator(Validator validator) {
+        this.validator = validator;
     }
 }

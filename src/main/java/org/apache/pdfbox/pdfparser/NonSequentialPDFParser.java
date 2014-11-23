@@ -67,6 +67,9 @@ import org.apache.pdfbox.pdmodel.encryption.SecurityHandlersManager;
 import org.apache.pdfbox.pdmodel.encryption.StandardDecryptionMaterial;
 import org.apache.pdfbox.persistence.util.COSObjectKey;
 
+import com.duallab.validation.ValidationConfig;
+import com.duallab.validation.validationtask.ValidationTaskType;
+
 /**
  * PDFParser which first reads startxref and xref tables in order to know valid
  * objects and parse only these objects. Thus it is closer to a conforming
@@ -636,6 +639,10 @@ public class NonSequentialPDFParser extends PDFParser
         {
             throw new IOException("Missing end of file marker '" + (new String(EOF_MARKER)) + "'");
         }
+
+        //pdf/a validation
+        validator.validate(new ValidationConfig(buf, bufOff, ValidationTaskType.NO_DATA_AFTER_EOF_VALIDATION_TASK));
+
         // ---- find last startxref preceding EOF marker
         bufOff = lastIndexOf(STARTXREF_MARKER, buf, bufOff);
 
@@ -1268,6 +1275,10 @@ public class NonSequentialPDFParser extends PDFParser
                 setPdfSource(offsetOrObjstmObNr);
 
                 // ---- we must have an indirect object
+
+                //pdf/a validation
+                validator.validate(new ValidationConfig(pdfSource, ValidationTaskType.INDIRECT_OBJECT_VALIDATION_TASK));
+
                 final long readObjNr = readObjectNumber();
                 final long readObjGen = readGenerationNumber();
                 readPattern(OBJ_MARKER);
@@ -1536,6 +1547,9 @@ public class NonSequentialPDFParser extends PDFParser
     @Override
     protected COSStream parseCOSStream(COSDictionary dic, RandomAccess file) throws IOException
     {
+        //pdf/a validation
+        validator.validate(new ValidationConfig(pdfSource, dic, ValidationTaskType.STREAM_OBJECT_VALIDATION_TASK));
+
         final COSStream stream = new COSStream(dic, file);
         OutputStream out = null;
         try

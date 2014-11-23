@@ -1,6 +1,5 @@
 package com.duallab.validation.validationtask.impl;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,26 +12,24 @@ import com.duallab.validation.validationtask.BaseValidationTask;
 
 public class HeaderValidationTask extends BaseValidationTask {
 
+    private List<PDFValidationError> errors = new ArrayList<>();
     private PushBackInputStream pdfSource;
 
     public List<PDFValidationError> validate(ValidationConfig validationConfig) throws Exception {
-        List<PDFValidationError> errors = new ArrayList<>();
-
         //this field will contain current offset in the pdf source stream at the beginning of validation.
         final long startOffset = validationConfig.getStream().getOffset();
         this.pdfSource = validationConfig.getStream();
 
-
         //header must start at offset 0 of pdf stream (6.1.2)
         this.pdfSource.seek(0);
-        String firstLine = readLine();
+        String firstLine = readLine(pdfSource);
         //TODO: discuss this validation logic
         if (firstLine == null || !(firstLine.matches("%PDF-1\\.[1-7]") || firstLine.matches("%PDF-2.0"))) {
             PDFValidationError error = new PDFValidationError("Invalid header : first line of pdf file must contain valid pdf header (6.1.2)");
             errors.add(error);
         }
 
-        String secondLine = readLine();
+        String secondLine = readLine(pdfSource);
         if (secondLine.charAt(0) != PFConstants.COMMENT) {
             PDFValidationError error = new PDFValidationError("Invalid header : second line must start with a % symbol (6.1.2)");
             errors.add(error);
@@ -56,31 +53,4 @@ public class HeaderValidationTask extends BaseValidationTask {
         return errors;
     }
 
-    protected String readLine() throws IOException {
-        if (pdfSource.isEOF()) {
-            throw new IOException( "Error: End-of-File, expected line");
-        }
-
-        StringBuilder buffer = new StringBuilder();
-
-        int c;
-        while ((c = pdfSource.read()) != -1) {
-            if (isEOL(c)) {
-                if (c == PFConstants.CR && isEOL()) {
-                    pdfSource.read();
-                }
-                break;
-            }
-            buffer.append( (char)c );
-        }
-        return buffer.toString();
-    }
-
-    protected boolean isEOL() throws IOException {
-        return isEOL(pdfSource.peek());
-    }
-
-    protected boolean isEOL(int c) {
-        return c == PFConstants.LF || c == PFConstants.CR;
-    }
 }

@@ -319,7 +319,7 @@ public class PDFParser extends BaseParser
 
     protected void parseHeader() throws IOException
     {
-        //pdf/a header validation
+        //pdf/a validation
         validator.validate(new ValidationConfig(pdfSource, ValidationTaskType.HEADER_VALIDATION_TASK));
         // read first line
         String header = readLine();
@@ -744,6 +744,9 @@ public class PDFParser extends BaseParser
         if( !xref.trim().equals( "xref" ) )
         {
             return false;
+        } else {
+            //pdf/a validation
+            validator.validate(new ValidationConfig(pdfSource, ValidationTaskType.XREF_TABLE_VALIDATION_TASK));
         }
 
         // signal start of new XRef

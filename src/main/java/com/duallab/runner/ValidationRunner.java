@@ -20,6 +20,8 @@ public class ValidationRunner {
         InputStream pdfSource = new FileInputStream(args[0]);
         NonSequentialPDFParser pdfParser = new NonSequentialPDFParser(pdfSource);
         pdfParser.setValidator(validator);
+
+        //here parsing-time validations will be performed
         pdfParser.parse();
         logger.log(LogLevel.INFO, "Validation completed");
     }

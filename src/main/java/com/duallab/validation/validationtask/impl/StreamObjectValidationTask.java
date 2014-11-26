@@ -1,91 +1,102 @@
 package com.duallab.validation.validationtask.impl;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.pdfbox.cos.COSDictionary;
 import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSNumber;
 import org.apache.pdfbox.io.PushBackInputStream;
 
 import com.duallab.utils.PFConstants;
-import com.duallab.validation.PDFValidationError;
 import com.duallab.validation.ValidationConfig;
+import com.duallab.validation.error.PDFStructureError;
+import com.duallab.validation.error.PDFValidationError;
 import com.duallab.validation.validationtask.BaseValidationTask;
 
 public class StreamObjectValidationTask extends BaseValidationTask {
 
-    private List<PDFValidationError> errors = new ArrayList<>();
     private COSDictionary streamDictionary;
     private PushBackInputStream pdfSource;
+    //this field will contain current offset in the pdf source stream at the beginning of validation.
+    private long startOffset;
 
-    public List<PDFValidationError> validate(ValidationConfig validationConfig) throws Exception {
-        //this field will contain current offset in the pdf source stream at the beginning of validation.
-        final long startOffset = validationConfig.getStream().getOffset();
-        this.streamDictionary = (COSDictionary) validationConfig.getParsedObjects().get(0);
-        this.pdfSource = validationConfig.getStream();
+    public StreamObjectValidationTask(ValidationConfig config) {
+        assert (config.getStream() != null &&
+                config.getParsedObjects().size() == 1 &&
+                config.getParsedObjects().get(0) instanceof COSDictionary):
+                "For stream object validation pdf stream and parsed stream dictionary shall be passed in config";
+        pdfSource = config.getStream();
+        startOffset = config.getStream().getOffset();
+        streamDictionary = (COSDictionary) config.getParsedObjects().get(0);
+    }
+
+    public void validate() throws Exception {
+        //we don't want to validate xref streams during pdf/a-1 validation because they didn't exist at the moment pdf/a-1 spec was created (in pdf v1.4 or below)
+        if (streamDictionary.containsKey(COSName.TYPE) && streamDictionary.getNameAsString(COSName.TYPE).equals(PFConstants.XREF_KEYWORD)) {
+            return;
+        }
 
         validateStreamObjectDictionary();
 
         //there can be whitespaces between stream dictionary and "stream" keyword
         skipSpaces(pdfSource);
         //this line will contain "stream" keyword, already checked in NonSequentialPDFParser.parseObjectsDynamically()
-        readUntilEOL(pdfSource);
+        readUntilWhitespace(pdfSource);
 
+        boolean wrongEOL = false;
         int nextByte = pdfSource.read();
-        if (nextByte == PFConstants.LF) {
-            if (isEOL(pdfSource.peek())) {
-                PDFValidationError error = new PDFValidationError("stream keyword shall be followed by a CRLF or a single LF character (6.1.7)");
-                errors.add(error);
+        if (isByteEOL(nextByte)) {
+            if (nextByte == PFConstants.LF) {
+                if (isByteEOL(pdfSource.peek())) {
+                    wrongEOL = true;
+                }
+            } else {
+                if (pdfSource.peek() != PFConstants.LF) {
+                    wrongEOL = true;
+                } else {
+                    pdfSource.read();
+                    if (isByteEOL(pdfSource.peek())) {
+                        wrongEOL = true;
+                    }
+                }
             }
         } else {
-            if (pdfSource.peek() != PFConstants.LF) {
-                PDFValidationError error = new PDFValidationError("stream keyword shall not be followed by a single CR character (6.1.7)");
-                errors.add(error);
-            } else {
-                pdfSource.read();
-            }
+            wrongEOL = true;
         }
 
-        //if there's multiple eol markers after "stream" keyword we still want to validate length
-        skipSpaces(pdfSource);
+        if (wrongEOL) {
+            PDFValidationError error = new PDFValidationError("stream keyword shall be followed by a CRLF or a single LF character (6.1.7)");
+            errors.add(error);
+        }
 
         COSNumber streamLength = (COSNumber) streamDictionary.getItem(COSName.LENGTH);
         if (streamLength == null) {
-            //reset current stream position
-            this.pdfSource.seek(startOffset);
-            throw new IOException("Missing length for stream.");
+            PDFStructureError error = new PDFStructureError("Missing length for stream.");
+            errors.add(error);
+            return;
         }
 
-        long actualStreamLength = 0;
-        int streamByte;
-        while (true) {
-            streamByte = pdfSource.read();
-            if (isEOL(streamByte) || streamByte == -1) {
-                break;
-            }
-            actualStreamLength++;
-            if (actualStreamLength > streamLength.longValue()) {
-                break;
+        //skip to expected stream end
+        pdfSource.seek(pdfSource.getOffset() + streamLength.longValue());
+        boolean incorrectStreamLength = false;
+        //allowed stream ending: (LR|CR|CRLF)endstream
+        if (!verifySingleReadEOLMarker(pdfSource)) {
+            incorrectStreamLength = true;
+        } else {
+            //read endstream keyword
+            if (!readUntilWhitespace(pdfSource).equals(PFConstants.ENDSTREAM_KEYWORD)) {
+                incorrectStreamLength = true;
             }
         }
 
-        if (actualStreamLength != streamLength.longValue()) {
+        if (incorrectStreamLength) {
             PDFValidationError error = new PDFValidationError("Actual stream length differs from defined in stream dictionary (6.1.7)");
             errors.add(error);
-        } else {
-            if (!isEOL(pdfSource.peek())) {
-                PDFValidationError error = new PDFValidationError("endstream keyword shall be preceded by EOL marker (6.1.7)");
-                errors.add(error);
-            }
         }
         //the presence of endstream keyword is required by pdf parser, so we won't check it
+    }
 
-        //reset current stream position
-        this.pdfSource.seek(startOffset);
-
-        return errors;
+    public void cleanup() throws Exception{
+        //reset stream position
+        pdfSource.seek(startOffset);
     }
 
     private void validateStreamObjectDictionary() {
@@ -96,5 +107,4 @@ public class StreamObjectValidationTask extends BaseValidationTask {
             errors.add(error);
         }
     }
-
 }

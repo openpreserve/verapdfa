@@ -1,13 +1,13 @@
-package com.duallab.validation;
+package com.duallab.validation.error;
 
-public class PDFValidationError {
+public class PDFStructureError extends PDFError {
 
     private String message;
 
-    public PDFValidationError() {
+    public PDFStructureError() {
     }
 
-    public PDFValidationError(String message) {
+    public PDFStructureError(String message) {
         this.message = message;
     }
 
@@ -23,4 +23,5 @@ public class PDFValidationError {
     public String toString() {
         return message;
     }
+
 }

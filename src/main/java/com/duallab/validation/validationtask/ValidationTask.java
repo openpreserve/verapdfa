@@ -2,11 +2,14 @@ package com.duallab.validation.validationtask;
 
 import java.util.List;
 
-import com.duallab.validation.PDFValidationError;
-import com.duallab.validation.ValidationConfig;
+import com.duallab.validation.error.PDFError;
 
 public interface ValidationTask {
 
-    List<PDFValidationError> validate(ValidationConfig validationConfig) throws Exception;
+    void validate() throws Exception;
+
+    void cleanup() throws Exception;
+
+    List<PDFError> getErrors();
 
 }

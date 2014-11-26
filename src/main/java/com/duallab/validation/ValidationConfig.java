@@ -5,16 +5,25 @@ import java.util.List;
 
 import org.apache.pdfbox.cos.COSBase;
 import org.apache.pdfbox.io.PushBackInputStream;
+import org.apache.pdfbox.pdfparser.XrefTrailerResolver;
 
 import com.duallab.validation.validationtask.ValidationTaskType;
 
 public class ValidationConfig {
 
-    private byte[] buffer;
-    private int bufOff;
-    private PushBackInputStream stream;
     private ValidationTaskType type;
+
+    // Used by : NoDataAfterEOFValidationTask
+    private byte[] buffer;
+    // Used by : NoDataAfterEOFValidationTask
+    private int bufOff;
+    // Used by : HeaderValidationTask, StreamObjectValidationTask,
+    // Used by : IndirectObjectValidationTask, XrefTableValidationTask
+    private PushBackInputStream stream;
+    // Used by : FileTrailerValidationTask, StreamObjectValidationTask
     private List<COSBase> parsedObjects;
+    // Used by : FileTrailerValidationTask
+    private XrefTrailerResolver xrefTrailerResolver;
 
     public ValidationConfig() {
     }
@@ -30,6 +39,17 @@ public class ValidationConfig {
         this.type = type;
     }
 
+    public ValidationConfig(COSBase parsedObject, ValidationTaskType type) {
+        this.type = type;
+        addParsedObject(parsedObject);
+    }
+
+    public ValidationConfig(COSBase parsedObject, XrefTrailerResolver xrefTrailerResolver, ValidationTaskType type) {
+        this.type = type;
+        this.xrefTrailerResolver = xrefTrailerResolver;
+        addParsedObject(parsedObject);
+    }
+
     public ValidationConfig(PushBackInputStream stream, COSBase parsedObject, ValidationTaskType type) {
         this.stream = stream;
         this.type = type;
@@ -40,8 +60,15 @@ public class ValidationConfig {
         if (this.parsedObjects == null) {
             parsedObjects = new ArrayList<>();
         }
-
         parsedObjects.add(cosBase);
+    }
+
+    public ValidationTaskType getType() {
+        return type;
+    }
+
+    public void setType(ValidationTaskType type) {
+        this.type = type;
     }
 
     public byte[] getBuffer() {
@@ -68,19 +95,19 @@ public class ValidationConfig {
         this.stream = stream;
     }
 
-    public ValidationTaskType getType() {
-        return type;
-    }
-
-    public void setType(ValidationTaskType type) {
-        this.type = type;
-    }
-
     public List<COSBase> getParsedObjects() {
         return parsedObjects;
     }
 
     public void setParsedObjects(List<COSBase> parsedObjects) {
         this.parsedObjects = parsedObjects;
+    }
+
+    public XrefTrailerResolver getXrefTrailerResolver() {
+        return xrefTrailerResolver;
+    }
+
+    public void setXrefTrailerResolver(XrefTrailerResolver xrefTrailerResolver) {
+        this.xrefTrailerResolver = xrefTrailerResolver;
     }
 }

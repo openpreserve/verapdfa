@@ -4,11 +4,12 @@ public interface PFConstants {
 
     char[] EOF_MARKER = new char[] { '%', '%', 'E', 'O', 'F' };
 
+    String XREF_KEYWORD = "XRef";
     String OBJ_KEYWORD = "obj";
     String ENDOBJ_KEYWORD  = "endobj";
     String ENDSTREAM_KEYWORD = "endstream";
+    String LINEARIZED_KEYWORD = "Linearized";
 
-    String TRAILER_KEY_LINEARIZED = "Linearized";
     String TRAILER_KEY_ID = "ID";
     String TRAILER_KEY_ENCRYPT = "Encrypt";
 

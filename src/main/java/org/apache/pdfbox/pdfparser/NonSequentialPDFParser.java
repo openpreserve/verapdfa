@@ -786,6 +786,9 @@ public class NonSequentialPDFParser extends PDFParser
             }
 
             exceptionOccurred = false;
+
+            //after parse pdf/a validation
+            validator.validate(new ValidationConfig(document, xrefTrailerResolver, ValidationTaskType.FILE_TRAILER_VALIDATION_TASK));
         }
         finally
         {
